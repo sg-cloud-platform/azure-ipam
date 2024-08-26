@@ -1,0 +1,30 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "tags": {
+      "value": {
+        "Application": "TAGS",
+        "Environment": "TAGS"
+      }
+    },
+    "uiAppId": {
+      "value": "UI_APP_ID"
+    },
+    "engineAppId": {
+      "value": "ENGINE_APP_ID"
+    },
+    "engineAppSecret": {
+      "value": "ENGINE_APP_SECRET"
+    },
+    "deployAsFunc": {
+      "value": false
+    },
+    "deployAsContainer": {
+      "value": true
+    },
+    "privateAcr": {
+      "value": false
+    }
+  }
+}
