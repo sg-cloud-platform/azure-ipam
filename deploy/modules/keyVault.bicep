@@ -1,8 +1,8 @@
 @description('KeyVault Name')
 param keyVaultName string
 
-@description('Deployment Location')
-param location string = resourceGroup().location
+//@description('Deployment Location')
+//param location string = resourceGroup().location
 
 @description('Managed Identity PrincipalId')
 param identityPrincipalId string
@@ -30,22 +30,26 @@ var keyVaultUser = '4633458b-17de-408a-b874-0445c86b69e6'
 var keyVaultUserId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultUser)
 var keyVaultUserRoleAssignmentId = guid(keyVaultUser, identityPrincipalId, keyVault.id)
 
-resource keyVault 'Microsoft.KeyVault/vaults@2021-11-01-preview' = {
+// resource keyVault 'Microsoft.KeyVault/vaults@2021-11-01-preview' = {
+//   name: keyVaultName
+//   location: location
+//   properties: {
+//     enablePurgeProtection: true
+//     enableRbacAuthorization: true
+//     tenantId: tenantId
+//     sku: {
+//       name: 'standard'
+//       family: 'A'
+//     }
+//     networkAcls: {
+//       defaultAction: 'Allow'
+//       bypass: 'AzureServices'
+//     }
+//   }
+// }
+
+resource keyVault 'Microsoft.KeyVault/vaults@2021-11-01-preview' existing = {
   name: keyVaultName
-  location: location
-  properties: {
-    enablePurgeProtection: true
-    enableRbacAuthorization: true
-    tenantId: tenantId
-    sku: {
-      name: 'standard'
-      family: 'A'
-    }
-    networkAcls: {
-      defaultAction: 'Allow'
-      bypass: 'AzureServices'
-    }
-  }
 }
 
 resource identityId 'Microsoft.KeyVault/vaults/secrets@2021-11-01-preview' = {

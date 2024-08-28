@@ -5,11 +5,7 @@ targetScope = 'subscription'
 param guid string = newGuid()
 
 @description('Deployment Location')
-param location string = deployment().location
-
-@maxLength(7)
-@description('Prefix for Resource Naming')
-param namePrefix string = 'ipam'
+param location string = 'uksouth'
 
 @description('Azure Cloud Enviroment')
 param azureCloud string = 'AZURE_PUBLIC'
@@ -30,28 +26,37 @@ param uiAppId string = '00000000-0000-0000-0000-000000000000'
 param engineAppId string
 
 @secure()
-@description('IPAM-Engine App Registration Client Secret')
 param engineAppSecret string
 
 @description('Tags')
 param tags object = {}
 
+@maxLength(7)
+@description('Prefix for Resource Naming')
+param namePrefix string = 'ipam'
+
 @description('IPAM Resource Names')
-param resourceNames object = {
-  functionName: '${namePrefix}-${uniqueString(guid)}'
-  appServiceName: '${namePrefix}-${uniqueString(guid)}'
-  functionPlanName: '${namePrefix}-asp-${uniqueString(guid)}'
-  appServicePlanName: '${namePrefix}-asp-${uniqueString(guid)}'
-  cosmosAccountName: '${namePrefix}-dbacct-${uniqueString(guid)}'
-  cosmosContainerName: '${namePrefix}-ctr'
-  cosmosDatabaseName: '${namePrefix}-db'
-  keyVaultName: '${namePrefix}-kv-${uniqueString(guid)}'
-  workspaceName: '${namePrefix}-law-${uniqueString(guid)}'
-  managedIdentityName: '${namePrefix}-mi-${uniqueString(guid)}'
-  resourceGroupName: '${namePrefix}-rg-${uniqueString(guid)}'
-  storageAccountName: '${namePrefix}stg${uniqueString(guid)}'
-  containerRegistryName: '${namePrefix}acr${uniqueString(guid)}'
+var resourceNames = {
+  functionName: 'func-cps-ipam-prod'
+  appServiceName: 'as-cps-ipam-prod'
+  functionPlanName: 'funcpn-cps-ipam-prod'
+  appServicePlanName: 'asp-cps-ipam-prod'
+  cosmosAccountName: 'cosmos-acc-cps-ipam-prod'
+  cosmosContainerName: 'cosmos-ctr-cps-ipam-prod'
+  cosmosDatabaseName: 'cosmos-db-cps-ipam-prod'
+  keyVaultName: 'pv-cps-ipam-x1qa'
+  workspaceName: 'log-cps-ipam-prod'
+  managedIdentityName: 'mi-cps-${namePrefix}-${uniqueString(guid)}'
+  resourceGroupName: 'rg-cps-ipam-app'
+  storageAccountName: 'st-cps-ipam-prod'
+  containerRegistryName: 'crcpsipamdevuksouth001'
 }
+
+param subId string
+param vnetResourceGroup string
+param vnetName string
+param subnetName string
+param keyVaultUri string
 
 // Resource Group
 resource resourceGroup 'Microsoft.Resources/resourceGroups@2021-04-01' = {
@@ -62,7 +67,7 @@ resource resourceGroup 'Microsoft.Resources/resourceGroups@2021-04-01' = {
 }
 
 // Log Analytics Workspace
-module logAnalyticsWorkspace './modules/logAnalyticsWorkspace.bicep' ={
+module logAnalyticsWorkspace './modules/logAnalyticsWorkspace.bicep' = {
   name: 'logAnalyticsWorkspaceModule'
   scope: resourceGroup
   params: {
@@ -85,17 +90,71 @@ module managedIdentity './modules/managedIdentity.bicep' = {
 module keyVault './modules/keyVault.bicep' = {
   name: 'keyVaultModule'
   scope: resourceGroup
+
   params: {
-    location: location
+    //location: location
     keyVaultName: resourceNames.keyVaultName
-    identityPrincipalId:  managedIdentity.outputs.principalId
-    identityClientId:  managedIdentity.outputs.clientId
+    identityPrincipalId: managedIdentity.outputs.principalId
+    identityClientId: managedIdentity.outputs.clientId
     uiAppId: uiAppId
     engineAppId: engineAppId
     engineAppSecret: engineAppSecret
     workspaceId: logAnalyticsWorkspace.outputs.workspaceId
   }
 }
+
+// module privateEndpoint 'br/public:avm/res/network/private-endpoint:0.7.0' = {
+//   name: 'privateEndpointDeployment'
+//   scope: resourceGroup
+//   params: {
+//     // Required parameters
+//     name: 'KEYVAULT-PE-NAME'
+//     subnetResourceId: '/subscriptions/${subId}/resourceGroups/${vnetResourceGroup}/providers/Microsoft.Network/virtualNetworks/${vnetName}/subnets/${subnetName}'
+//     // Non-required parameters
+//     customNetworkInterfaceName: 'KEYVAULT-PE-NIC'
+//     ipConfigurations: [
+//       {
+//         name: 'myIPconfig'
+//         properties: {
+//           groupId: 'vault'
+//           memberName: 'default'
+//           privateIPAddress: 'PRIVATE_IP_ADDRESS'
+//         }
+//       }
+//     ]
+//     location: location
+//     lock: {
+//       kind: 'CanNotDelete'
+//       name: 'myCustomLockName'
+//     }
+//     privateDnsZoneGroup: {
+//       privateDnsZoneGroupConfigs: [
+//         {
+//           privateDnsZoneResourceId: '/subscriptions/${subId}/resourceGroups/RESOURCEGROUP/providers/Microsoft.Network/privateDnsZones/privatelink.vaultcore.azure.net'
+//         }
+//       ]
+//     }
+//     privateLinkServiceConnections: [
+//       {
+//         name: 'KEYVAULT-PE-CONNECTION'
+//         properties: {
+//           groupIds: [
+//             'vault'
+//           ]
+//           privateLinkServiceId: '/subscriptions/${subId}/resourceGroups/RESOURCEGROUP/providers/Microsoft.KeyVault/vaults/KEYVAULTNAME'
+//         }
+//       }
+//     ]
+//     tags: {
+//       Environment: 'Non-Prod'
+//       'hidden-title': 'This is visible in the resource name'
+//       Role: 'DeploymentValidation'
+//     }
+//   }
+//   dependsOn: [
+//     keyVault
+//   ]
+// }
 
 // Cosmos DB for IPAM Database
 module cosmos './modules/cosmos.bicep' = {
@@ -106,10 +165,35 @@ module cosmos './modules/cosmos.bicep' = {
     cosmosAccountName: resourceNames.cosmosAccountName
     cosmosContainerName: resourceNames.cosmosContainerName
     cosmosDatabaseName: resourceNames.cosmosDatabaseName
-    keyVaultName: keyVault.outputs.keyVaultName
+    keyVaultName: resourceNames.keyVaultName
     workspaceId: logAnalyticsWorkspace.outputs.workspaceId
     principalId: managedIdentity.outputs.principalId
   }
+}
+
+module privateEndpointcosmos 'br/public:avm/res/network/private-endpoint:0.7.0' = {
+  name: 'privateEndpointDeploymentcosmos'
+  scope: resourceGroup
+  params: {
+    // Required parameters
+    name: 'ipam-cosmos'
+    subnetResourceId: '/subscriptions/${subId}/resourceGroups/${vnetResourceGroup}/providers/Microsoft.Network/virtualNetworks/${vnetName}/subnets/${subnetName}'
+    location: location
+    privateLinkServiceConnections: [
+      {
+        name: 'COSMOSDB-ENDPOINT-NAME'
+        properties: {
+          groupIds: [
+            'Sql'
+          ]
+          privateLinkServiceId: '/subscriptions/${subId}/resourceGroups/RESOURCEGROUPNAME/providers/Microsoft.DocumentDB/databaseAccounts/COSMOS-DB-NAME'
+        }
+      }
+    ]
+  }
+  dependsOn: [
+    cosmos
+  ]
 }
 
 // Storage Account for Nginx Config/Function Metadata
@@ -143,7 +227,7 @@ module appService './modules/appService.bicep' = if (!deployAsFunc) {
     azureCloud: azureCloud
     appServiceName: resourceNames.appServiceName
     appServicePlanName: resourceNames.appServicePlanName
-    keyVaultUri: keyVault.outputs.keyVaultUri
+    keyVaultUri: keyVaultUri
     cosmosDbUri: cosmos.outputs.cosmosDocumentEndpoint
     databaseName: resourceNames.cosmosDatabaseName
     containerName: resourceNames.cosmosContainerName
@@ -153,7 +237,33 @@ module appService './modules/appService.bicep' = if (!deployAsFunc) {
     deployAsContainer: deployAsContainer
     privateAcr: privateAcr
     privateAcrUri: privateAcr ? containerRegistry.outputs.acrUri : ''
+    //Subnetid: '/subscriptions/${subId}/resourceGroups/${vnetResourceGroup}/providers/Microsoft.Network/virtualNetworks/${vnetName}/subnets/${subnetName}'
   }
+}
+
+module privateEndpointappservice 'br/public:avm/res/network/private-endpoint:0.7.0' = {
+  name: 'privateEndpointDeploymentappservice'
+  scope: resourceGroup
+  params: {
+    // Required parameters
+    name: 'ipam-appservice'
+    subnetResourceId: '/subscriptions/${subId}/resourceGroups/${vnetResourceGroup}/providers/Microsoft.Network/virtualNetworks/${vnetName}/subnets/${subnetName}'
+    location: location
+    privateLinkServiceConnections: [
+      {
+        name: 'ipamappservice'
+        properties: {
+          groupIds: [
+            'sites'
+          ]
+          privateLinkServiceId: '/subscriptions/${subId}/resourceGroups/RESOURCEGROUP/providers/Microsoft.Web/sites/APPSERVICE'
+        }
+      }
+    ]
+  }
+  dependsOn: [
+    appService
+  ]
 }
 
 // Function App
@@ -165,7 +275,7 @@ module functionApp './modules/functionApp.bicep' = if (deployAsFunc) {
     azureCloud: azureCloud
     functionAppName: resourceNames.functionName
     functionPlanName: resourceNames.appServicePlanName
-    keyVaultUri: keyVault.outputs.keyVaultUri
+    keyVaultUri: keyVaultUri
     cosmosDbUri: cosmos.outputs.cosmosDocumentEndpoint
     databaseName: resourceNames.cosmosDatabaseName
     containerName: resourceNames.cosmosContainerName
@@ -184,6 +294,9 @@ output suffix string = uniqueString(guid)
 output subscriptionId string = subscription().subscriptionId
 output resourceGroupName string = resourceGroup.name
 output appServiceName string = deployAsFunc ? resourceNames.functionName : resourceNames.appServiceName
-output appServiceHostName string = deployAsFunc ? functionApp.outputs.functionAppHostName : appService.outputs.appServiceHostName
+output appServiceHostName string = deployAsFunc
+  ? functionApp.outputs.functionAppHostName
+  : appService.outputs.appServiceHostName
 output acrName string = privateAcr ? containerRegistry.outputs.acrName : ''
 output acrUri string = privateAcr ? containerRegistry.outputs.acrUri : ''
+output keyvaultId string = resourceNames.keyVaultName
