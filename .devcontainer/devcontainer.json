@@ -1,0 +1,29 @@
+{
+	"image": "mcr.microsoft.com/devcontainers/universal:2",
+	"features": {
+		"ghcr.io/devcontainers/features/powershell:1": {
+			"version": "latest"
+		},
+		"ghcr.io/rchaganti/vsc-devcontainer-features/azurebicep:1": {},
+		"ghcr.io/stuartleeks/dev-container-features/azure-cli-persistence:0": {},
+		"ghcr.io/natescherer/devcontainers-custom-features/powershell-resources:1": {},
+		"ghcr.io/jlaundry/devcontainer-features/azure-functions-core-tools:1": {
+			"version": "latest"
+		},
+		"ghcr.io/joshuanianji/devcontainer-features/azure-cli-persistence-forked:0": {},
+		"ghcr.io/azure/azure-dev/azd:0": {
+			"version": "stable"
+		},
+		"ghcr.io/bartventer/arch-devcontainer-features/azure-cli:1": {},
+		"ghcr.io/tcaky/devcontainer-features/alpine-powershell:0": {},
+		"ghcr.io/jpawlowski/devcontainer-features/powershell-extended:2": {
+			"updateModulesHelp": true,
+			"installOhMyPosh": true,
+			"installOhMyPoshConfig": true,
+			"version": "latest",
+			"installMethod": "package",
+			"updatePSResourceGet": "release",
+			"updatePSReadLine": "release"
+		}
+	}
+}
